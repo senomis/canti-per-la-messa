@@ -70,16 +70,27 @@
           </div>
         </div>
 
-        <input id="playlist-name" placeholder="Nome della scaletta (es. Domenica 5 ottobre)" maxlength="120">
+        <div class="playlist-meta">
+          <input id="playlist-name" placeholder="Nome (es. XXVII domenica T.O.)" maxlength="120" aria-label="Nome della scaletta">
+          <input id="playlist-date" type="date" aria-label="Data della messa">
+        </div>
         <ol id="playlist-items" class="playlist-items"></ol>
         <p id="playlist-empty" class="muted empty">Aggiungi i canti dall'archivio con il pulsante <b>+</b>.
           Puoi riordinarli trascinandoli o con le frecce.</p>
 
         <div class="playlist-foot">
           <p id="playlist-info" class="muted"></p>
+          <div class="pdf-options">
+            <label class="inline"><input type="checkbox" id="opt-cover"> Copertina con nome, data ed elenco dei canti</label>
+            <label class="inline"><input type="checkbox" id="opt-drop-black"> Togli la pagina nera dopo l'ultimo canto</label>
+          </div>
           <div class="actions">
             <button id="btn-delete-playlist" class="danger ghost" type="button">Elimina</button>
+            <button id="btn-duplicate-playlist" type="button" title="Crea una copia, con la data spostata di una settimana">Duplica</button>
             <button id="btn-save-playlist" type="button">Salva</button>
+          </div>
+          <div class="actions">
+            <button id="btn-preview" type="button">Anteprima</button>
             <button id="btn-download" class="primary" type="button">Scarica PDF</button>
           </div>
         </div>
@@ -121,6 +132,20 @@
         <button type="submit" class="primary">Importa</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="preview-dialog" class="wide">
+    <div class="preview-head">
+      <div>
+        <h2 id="preview-title">Anteprima</h2>
+        <p id="preview-info" class="muted small"></p>
+      </div>
+      <div class="actions">
+        <button type="button" data-close>Chiudi</button>
+        <button type="button" id="btn-preview-download" class="primary">Scarica PDF</button>
+      </div>
+    </div>
+    <div id="preview-pages" class="preview-pages"></div>
   </dialog>
 
   <dialog id="password-dialog">

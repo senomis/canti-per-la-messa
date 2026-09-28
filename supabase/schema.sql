@@ -17,6 +17,7 @@ create table public.songs (
 create table public.playlists (
   id          uuid primary key default gen_random_uuid(),
   name        text not null check (length(trim(name)) > 0),
+  mass_date   date,                          -- data della messa (facoltativa)
   song_ids    uuid[] not null default '{}',  -- canti in ordine (ripetizioni ammesse)
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()

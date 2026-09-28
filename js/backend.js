@@ -86,10 +86,11 @@ async function supabaseBackend(url, key) {
     async listPlaylists() {
       return check(await sb.from('playlists').select('*'));
     },
-    async savePlaylist({ id, name, song_ids }) {
+    async savePlaylist({ id, name, mass_date, song_ids }) {
+      const row = { name, mass_date, song_ids };
       const q = id
-        ? sb.from('playlists').update({ name, song_ids }).eq('id', id)
-        : sb.from('playlists').insert({ name, song_ids });
+        ? sb.from('playlists').update(row).eq('id', id)
+        : sb.from('playlists').insert(row);
       return check(await q.select().single());
     },
     async deletePlaylist(id) {
@@ -175,13 +176,13 @@ async function demoBackend() {
     async getSongPdf(song) { return files.get(song.file_path).slice(); },
 
     async listPlaylists() { return clone(playlists); },
-    async savePlaylist({ id, name, song_ids }) {
+    async savePlaylist({ id, name, mass_date, song_ids }) {
       if (playlists.some((p) => p.id !== id && p.name.toLowerCase() === name.toLowerCase())) {
         throw Object.assign(new Error('duplicate'), { code: '23505' });
       }
       let p = playlists.find((x) => x.id === id);
-      if (p) Object.assign(p, { name, song_ids, updated_at: now() });
-      else playlists.push(p = { id: crypto.randomUUID(), name, song_ids, created_at: now(), updated_at: now() });
+      if (p) Object.assign(p, { name, mass_date, song_ids, updated_at: now() });
+      else playlists.push(p = { id: crypto.randomUUID(), name, mass_date, song_ids, created_at: now(), updated_at: now() });
       return clone(p);
     },
     async deletePlaylist(id) { playlists = playlists.filter((p) => p.id !== id); },

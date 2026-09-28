@@ -6,8 +6,12 @@ come un unico PDF.
 - **Ricerca** per titolo (anche parziale, senza badare ad accenti o maiuscole) e per tipologia.
 - **Archivio**: aggiunta di un canto (PDF + tipologie), importazione di molti PDF insieme,
   modifica (titolo, tipologie, sostituzione del file), eliminazione.
-- **Scalette**: composizione, riordino (trascinamento o frecce), salvataggio con nome,
-  download del PDF unito nell'ordine della scaletta.
+- **Scalette**: composizione, riordino (trascinamento o frecce), salvataggio con nome e data
+  della messa, duplicazione (la copia prende la data della settimana dopo), download del PDF
+  unito nell'ordine della scaletta.
+- **PDF della scaletta**: anteprima delle pagine prima di scaricare, copertina facoltativa
+  (nome, data, elenco dei canti con la pagina di inizio), rimozione facoltativa della pagina
+  nera dopo l'ultimo canto (solo se è davvero nera).
 
 L'unione dei PDF avviene nel browser ([pdf-lib](https://pdf-lib.js.org)): i file vengono
 copiati così come sono, compresa la pagina nera finale di ogni canto.
@@ -34,7 +38,13 @@ In locale serve un piccolo server (i moduli JavaScript non funzionano aprendo il
 powershell -ExecutionPolicy Bypass -File serve.ps1
 ```
 
-poi apri <http://localhost:8080>.
+poi apri <http://localhost:8080>. Aggiungendo `?demo` all'indirizzo
+(<http://localhost:8080/?demo>) si usa la modalità demo anche con Supabase configurato.
+
+## Aggiornamenti del database
+
+Se il database è stato creato con una versione precedente di `schema.sql`, esegui nel
+SQL Editor, in ordine, i file di [`supabase/migrations`](supabase/migrations) non ancora applicati.
 
 ## Installazione
 

@@ -1,6 +1,6 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY, MAX_FILE_MB, TAGS } from './config.js';
 import { createBackend } from './backend.js';
-import { countPages, mergePdfs } from './pdf.js';
+import { countPages, buildPlaylistPdf, openForRender, renderPage } from './pdf.js';
 
 // ---------------------------------------------------------------- Utilità
 
@@ -8,10 +8,19 @@ const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // Minuscolo e senza accenti, per confronti e ricerca ("perché" trova "perche").
-const norm = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+const norm = (s) => String(s ?? '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
 const tagLabel = (id) => TAGS.find((t) => t.id === id)?.label ?? id;
 const byTitle = (a, b) => a.title.localeCompare(b.title, 'it', { sensitivity: 'base' });
-const byName = (a, b) => a.name.localeCompare(b.name, 'it', { sensitivity: 'base' });
+// Scalette: prima le più recenti per data, poi quelle senza data in ordine alfabetico.
+const byDateThenName = (a, b) => (b.mass_date ?? '').localeCompare(a.mass_date ?? '')
+  || a.name.localeCompare(b.name, 'it', { sensitivity: 'base' });
+const shortDate = (iso) => iso.split('-').reverse().join('/');
+function addDays(iso, days) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const date = new Date(y, m - 1, d + days);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
 const titleFromFileName = (name) => name.replace(/\.pdf$/i, '').replace(/[_]+/g, ' ').replace(/\s+/g, ' ').trim();
 
 function errorText(e) {
@@ -57,13 +66,15 @@ const checkedValues = (container) => [...container.querySelectorAll('input:check
 
 // ---------------------------------------------------------------- Stato
 
-const backend = await createBackend(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Con "?demo" nell'indirizzo si prova l'app con dati di esempio, senza toccare quelli veri.
+const forceDemo = new URLSearchParams(location.search).has('demo');
+const backend = forceDemo ? await createBackend() : await createBackend(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const state = {
   songs: [],
   playlists: [],
   filter: { words: [], tags: new Set(), mode: 'all' },
-  pl: { id: null, name: '', songIds: [] }, // scaletta aperta
+  pl: { id: null, name: '', date: '', songIds: [] }, // scaletta aperta
   dirty: false,
 };
 const pdfCache = new Map(); // file_path -> Uint8Array
@@ -145,7 +156,7 @@ $('#password-form').addEventListener('submit', async (e) => {
 async function loadAll() {
   const [songs, playlists] = await Promise.all([backend.listSongs(), backend.listPlaylists()]);
   state.songs = songs.sort(byTitle);
-  state.playlists = playlists.sort(byName);
+  state.playlists = playlists.sort(byDateThenName);
   pdfCache.clear();
   renderSongs();
   renderPlaylistSelect();
@@ -383,6 +394,8 @@ importForm.addEventListener('submit', async (e) => {
 // ---------------------------------------------------------------- Scaletta
 
 const plName = $('#playlist-name');
+const plDate = $('#playlist-date');
+const emptyPlaylist = () => ({ id: null, name: '', date: '', songIds: [] });
 
 function markDirty() {
   state.dirty = true;
@@ -399,8 +412,8 @@ function addToPlaylist(song) {
 
 function openPlaylist(p) {
   state.pl = p
-    ? { id: p.id, name: p.name, songIds: p.song_ids.filter((id) => songById(id)) }
-    : { id: null, name: '', songIds: [] };
+    ? { id: p.id, name: p.name, date: p.mass_date ?? '', songIds: p.song_ids.filter((id) => songById(id)) }
+    : emptyPlaylist();
   state.dirty = false;
   renderPlaylistSelect();
   renderPlaylist();
@@ -412,7 +425,7 @@ const confirmDiscard = () => !state.dirty || confirm('La scaletta aperta ha modi
 function renderPlaylistSelect() {
   const sel = $('#playlist-select');
   sel.innerHTML = `<option value="">${state.playlists.length ? 'Apri scaletta salvata…' : 'Nessuna scaletta salvata'}</option>`
-    + state.playlists.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    + state.playlists.map((p) => `<option value="${p.id}">${p.mass_date ? `${shortDate(p.mass_date)} · ` : ''}${esc(p.name)}</option>`).join('');
   sel.value = state.pl.id ?? '';
 }
 
@@ -429,8 +442,32 @@ $('#btn-new-playlist').addEventListener('click', () => {
   plName.focus();
 });
 
+// Copia della scaletta aperta, da salvare con un nuovo nome; la data slitta di una settimana.
+$('#btn-duplicate-playlist').addEventListener('click', () => {
+  const { name, date, songIds } = state.pl;
+  state.pl = {
+    id: null,
+    name: name.trim() ? `${name.trim()} (copia)` : '',
+    date: date ? addDays(date, 7) : '',
+    songIds: [...songIds],
+  };
+  state.dirty = true;
+  renderPlaylistSelect();
+  renderPlaylist();
+  renderSongs();
+  plName.focus();
+  plName.select();
+  toast('Copia creata: cambia il nome e salvala.');
+});
+
 plName.addEventListener('input', () => {
   state.pl.name = plName.value;
+  state.dirty = true;
+  renderPlaylistInfo();
+});
+
+plDate.addEventListener('change', () => {
+  state.pl.date = plDate.value;
   state.dirty = true;
   renderPlaylistInfo();
 });
@@ -438,6 +475,7 @@ plName.addEventListener('input', () => {
 function renderPlaylist() {
   const items = state.pl.songIds.map((id) => songById(id)).filter(Boolean);
   if (plName.value !== state.pl.name) plName.value = state.pl.name;
+  if (plDate.value !== state.pl.date) plDate.value = state.pl.date;
   $('#playlist-empty').hidden = items.length > 0;
   $('#playlist-items').innerHTML = items.map((s, i) => `
     <li draggable="true" data-index="${i}">
@@ -453,7 +491,9 @@ function renderPlaylist() {
       </div>
     </li>`).join('');
   $('#btn-delete-playlist').hidden = !state.pl.id;
+  $('#btn-duplicate-playlist').disabled = items.length === 0;
   $('#btn-download').disabled = items.length === 0;
+  $('#btn-preview').disabled = items.length === 0;
   renderPlaylistInfo();
 }
 
@@ -523,8 +563,10 @@ $('#btn-save-playlist').addEventListener('click', async () => {
     return plName.focus();
   }
   try {
-    const saved = await backend.savePlaylist({ id: state.pl.id, name, song_ids: state.pl.songIds });
-    state.playlists = [...state.playlists.filter((p) => p.id !== saved.id), saved].sort(byName);
+    const saved = await backend.savePlaylist({
+      id: state.pl.id, name, mass_date: state.pl.date || null, song_ids: state.pl.songIds,
+    });
+    state.playlists = [...state.playlists.filter((p) => p.id !== saved.id), saved].sort(byDateThenName);
     state.pl.id = saved.id;
     state.pl.name = saved.name;
     state.dirty = false;
@@ -548,10 +590,31 @@ $('#btn-delete-playlist').addEventListener('click', async () => {
   }
 });
 
-$('#btn-download').addEventListener('click', async () => {
+// ---------------------------------------------------------------- PDF della scaletta
+
+// Le opzioni restano memorizzate in questo browser.
+const OPTIONS_KEY = 'canti-per-la-messa:pdf-options';
+const optCover = $('#opt-cover');
+const optDropBlack = $('#opt-drop-black');
+try {
+  const saved = JSON.parse(localStorage.getItem(OPTIONS_KEY) ?? '{}');
+  optCover.checked = saved.cover ?? true;
+  optDropBlack.checked = saved.dropBlack ?? false;
+} catch {
+  optCover.checked = true;
+}
+[optCover, optDropBlack].forEach((el) => el.addEventListener('change', () => {
+  try {
+    localStorage.setItem(OPTIONS_KEY, JSON.stringify({ cover: optCover.checked, dropBlack: optDropBlack.checked }));
+  } catch { /* archivio del browser non disponibile: pazienza */ }
+}));
+
+const pdfFileName = () => `${(state.pl.name.trim() || 'Scaletta').replace(/[\\/:*?"<>|]+/g, '-')}.pdf`;
+
+// Scarica i PDF dei canti e li unisce; "btn" mostra l'avanzamento.
+async function buildPdf(btn) {
   const songs = state.pl.songIds.map((id) => songById(id)).filter(Boolean);
-  if (!songs.length) return;
-  const btn = $('#btn-download');
+  const label = btn.textContent;
   btn.disabled = true;
   try {
     const items = [];
@@ -559,18 +622,83 @@ $('#btn-download').addEventListener('click', async () => {
       btn.textContent = `Scarico ${i + 1}/${songs.length}…`;
       items.push({ title: s.title, bytes: await getPdf(s) });
     }
-    const name = state.pl.name.trim() || 'Scaletta';
-    const merged = await mergePdfs(items, {
-      title: name,
+    const result = await buildPlaylistPdf(items, {
+      title: state.pl.name.trim() || 'Scaletta',
+      date: state.pl.date,
+      cover: optCover.checked,
+      dropFinalBlack: optDropBlack.checked,
       onProgress: (i, n) => { btn.textContent = `Unisco ${i}/${n}…`; },
     });
-    downloadBytes(merged, `${name.replace(/[\\/:*?"<>|]+/g, '-')}.pdf`);
-  } catch (e) {
-    toast(`Creazione del PDF non riuscita: ${errorText(e)}`, 'error');
+    if (result.lastNotBlack) toast('L\'ultima pagina dell\'ultimo canto non è nera: è stata lasciata.');
+    return result;
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Scarica PDF';
+    btn.textContent = label;
   }
+}
+
+$('#btn-download').addEventListener('click', async (e) => {
+  try {
+    const { bytes } = await buildPdf(e.currentTarget);
+    downloadBytes(bytes, pdfFileName());
+  } catch (err) {
+    toast(`Creazione del PDF non riuscita: ${errorText(err)}`, 'error');
+  }
+});
+
+// Anteprima: miniature di tutte le pagine, disegnate solo quando diventano visibili.
+let preview = null; // { bytes, doc, observer }
+
+$('#btn-preview').addEventListener('click', async (e) => {
+  let result;
+  try {
+    result = await buildPdf(e.currentTarget);
+  } catch (err) {
+    return toast(`Creazione dell'anteprima non riuscita: ${errorText(err)}`, 'error');
+  }
+  const doc = await openForRender(result.bytes);
+  const container = $('#preview-pages');
+  const observer = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      observer.unobserve(entry.target);
+      const canvas = entry.target.querySelector('canvas');
+      renderPage(doc, Number(entry.target.dataset.page), canvas, 220)
+        .then(() => entry.target.classList.add('ready'))
+        .catch(() => {});
+    }
+  }, { root: $('#preview-dialog'), rootMargin: '300px' });
+  preview = { bytes: result.bytes, doc, observer };
+
+  let html = '';
+  let group = null;
+  result.pages.forEach((p, i) => {
+    if (p.group !== group) {
+      if (group !== null) html += '</div>';
+      group = p.group;
+      html += `<h3>${esc(group)}</h3><div class="thumbs">`;
+    }
+    html += `<figure data-page="${i + 1}"><canvas></canvas><figcaption>${esc(p.label)}</figcaption></figure>`;
+  });
+  container.innerHTML = `${html}</div>`;
+  container.querySelectorAll('figure').forEach((f) => observer.observe(f));
+
+  $('#preview-title').textContent = state.pl.name.trim() || 'Scaletta';
+  $('#preview-info').textContent = `${result.pages.length} pagine`
+    + (result.droppedBlack ? ' · pagina nera finale tolta' : '');
+  $('#preview-dialog').showModal();
+  container.scrollTop = 0;
+});
+
+$('#btn-preview-download').addEventListener('click', () => {
+  if (preview) downloadBytes(preview.bytes, pdfFileName());
+});
+
+$('#preview-dialog').addEventListener('close', () => {
+  preview?.observer.disconnect();
+  preview?.doc.destroy();
+  preview = null;
+  $('#preview-pages').innerHTML = '';
 });
 
 // ---------------------------------------------------------------- Avvio
