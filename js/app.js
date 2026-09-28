@@ -355,28 +355,43 @@ importForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const files = [...importForm.files.files];
   const tags = checkedValues($('#import-tags'));
-  const skipDup = importForm.skipDup.checked;
+  const onDup = importForm.onDup.value; // skip | replace | add
   const submit = importForm.querySelector('[type=submit]');
   const log = $('#import-log');
   log.innerHTML = '';
   submit.disabled = true;
-  let ok = 0;
+  let added = 0;
+  let replaced = 0;
   for (const [i, file] of files.entries()) {
     submit.textContent = `Importazione ${i + 1}/${files.length}…`;
     const title = titleFromFileName(file.name);
     const li = document.createElement('li');
     log.append(li);
     try {
-      if (skipDup && state.songs.some((s) => norm(s.title) === norm(title))) {
+      const existing = state.songs.filter((s) => norm(s.title) === norm(title));
+      if (existing.length && onDup === 'skip') {
         li.className = 'skip';
         li.textContent = `${title} — già presente, saltato`;
         continue;
       }
+      if (existing.length > 1 && onDup === 'replace') {
+        throw new Error(`ci sono ${existing.length} canti con questo titolo: sostituisci il PDF con “Modifica”`);
+      }
       const { bytes, pageCount } = await readPdfFile(file);
-      state.songs.push(await backend.createSong({ title, tags, file, bytes, pageCount }));
-      li.className = 'ok';
-      li.textContent = `${title} — ${pageCount} pag.`;
-      ok++;
+      if (existing.length && onDup === 'replace') {
+        const [old] = existing;
+        const updated = await backend.updateSong(old, { title: old.title, tags: old.tags, file, bytes, pageCount });
+        pdfCache.delete(old.file_path);
+        state.songs = state.songs.map((s) => (s.id === updated.id ? updated : s));
+        li.className = 'ok';
+        li.textContent = `${title} — PDF sostituito (${pageCount} pag.)`;
+        replaced++;
+      } else {
+        state.songs.push(await backend.createSong({ title, tags, file, bytes, pageCount }));
+        li.className = 'ok';
+        li.textContent = `${title} — aggiunto (${pageCount} pag.)`;
+        added++;
+      }
     } catch (err) {
       li.className = 'err';
       li.textContent = `${file.name} — ${errorText(err)}`;
@@ -385,10 +400,11 @@ importForm.addEventListener('submit', async (e) => {
   }
   state.songs.sort(byTitle);
   renderSongs();
+  renderPlaylist();
   submit.disabled = false;
   submit.textContent = 'Importa';
   importForm.files.value = '';
-  toast(`${ok} canti importati.`);
+  toast(`${added} canti aggiunti${replaced ? `, ${replaced} PDF sostituiti` : ''}.`);
 });
 
 // ---------------------------------------------------------------- Scaletta

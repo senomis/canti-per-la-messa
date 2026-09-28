@@ -220,6 +220,7 @@ fieldset { border: 1px solid var(--border); border-radius: 8px; margin: 0; paddi
 legend { padding: 0 .3rem; font-weight: 500; }
 .tag-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .35rem .75rem; }
 .tag-checks label { display: flex; align-items: center; gap: .4rem; font-weight: 400; }
+.radio-list { display: grid; gap: .35rem; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: .5rem; }
 
 dialog.wide { width: min(1100px, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); padding: 0; }

@@ -125,7 +125,14 @@
         <legend>Tipologia da assegnare a tutti (facoltativa)</legend>
         <div id="import-tags" class="tag-checks"></div>
       </fieldset>
-      <label class="inline"><input type="checkbox" name="skipDup" checked> Salta i file con un titolo già presente</label>
+      <fieldset>
+        <legend>Se esiste già un canto con lo stesso titolo</legend>
+        <div class="radio-list">
+          <label class="inline"><input type="radio" name="onDup" value="skip" checked> Salta il file</label>
+          <label class="inline"><input type="radio" name="onDup" value="replace"> Sostituisci il PDF del canto esistente (tipologie e scalette restano)</label>
+          <label class="inline"><input type="radio" name="onDup" value="add"> Aggiungi comunque un nuovo canto</label>
+        </div>
+      </fieldset>
       <ul id="import-log" class="import-log"></ul>
       <div class="dialog-actions">
         <button type="button" data-close>Chiudi</button>
