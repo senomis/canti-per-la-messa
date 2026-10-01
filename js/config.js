@@ -7,9 +7,9 @@ export const SUPABASE_ANON_KEY = 'sb_publishable_RF_lTjQqBNbbGL15dXJLqw_rYn83oRo
 // Dimensione massima di un singolo PDF (deve essere <= al limite impostato sul bucket).
 export const MAX_FILE_MB = 20;
 
-// Tipologie dei canti. L'"id" viene salvato nel database: non cambiarlo dopo aver
-// caricato i canti. L'etichetta invece si può modificare liberamente.
-export const TAGS = [
+// Tipologie usate solo dalla modalità demo. Quelle vere stanno nella tabella "tags"
+// del database e l'admin le modifica dall'app ("Tipologie").
+export const DEMO_TAGS = [
   { id: 'ingresso', label: 'Ingresso' },
   { id: 'vangelo', label: 'Al Vangelo' },
   { id: 'offertorio', label: 'Offertorio' },

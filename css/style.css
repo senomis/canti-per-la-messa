@@ -221,6 +221,21 @@ legend { padding: 0 .3rem; font-weight: 500; }
 .tag-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .35rem .75rem; }
 .tag-checks label { display: flex; align-items: center; gap: .4rem; font-weight: 400; }
 .radio-list { display: grid; gap: .35rem; }
+
+.role-badge {
+  font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+  padding: .1rem .5rem; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent);
+}
+
+.tags-manager { display: grid; gap: .9rem; }
+.tags-list { list-style: none; margin: 0; padding: 0; max-height: 50vh; overflow-y: auto; }
+.tags-list li { display: flex; align-items: center; gap: .5rem; padding: .3rem 0; border-top: 1px solid var(--border); }
+.tags-list li:first-child { border-top: 0; }
+.tags-list input { flex: 1; width: auto; min-width: 0; padding: .4rem .6rem; }
+.tags-list .uses { white-space: nowrap; min-width: 4.5rem; text-align: right; }
+.tag-add { display: flex; gap: .5rem; }
+.tag-add input { flex: 1; width: auto; min-width: 0; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: .5rem; }
 
 dialog.wide { width: min(1100px, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); padding: 0; }

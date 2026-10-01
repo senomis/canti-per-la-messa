@@ -31,6 +31,7 @@
       <h1>🎵 Canti per la messa</h1>
       <div class="user">
         <span id="user-email" class="muted"></span>
+        <span id="user-role" class="role-badge" hidden>admin</span>
         <button id="btn-password" class="ghost" type="button">Cambia password</button>
         <button id="btn-logout" class="ghost" type="button">Esci</button>
       </div>
@@ -41,6 +42,7 @@
         <div class="panel-head">
           <h2 id="songs-heading">Archivio canti</h2>
           <div class="actions">
+            <button id="btn-tags" type="button" hidden>Tipologie</button>
             <button id="btn-import" type="button">Importa più PDF</button>
             <button id="btn-new-song" class="primary" type="button">+ Nuovo canto</button>
           </div>
@@ -139,6 +141,23 @@
         <button type="submit" class="primary">Importa</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="tags-dialog">
+    <div class="tags-manager">
+      <h2>Tipologie dei canti</h2>
+      <p class="muted small">Le modifiche si salvano subito. Rinominare una tipologia non cambia
+        i canti a cui è assegnata.</p>
+      <ul id="tags-list" class="tags-list"></ul>
+      <form id="tag-add-form" class="tag-add">
+        <input name="label" placeholder="Nuova tipologia (es. Pentecoste)" maxlength="40" required autocomplete="off">
+        <button type="submit" class="primary">Aggiungi</button>
+      </form>
+      <p class="error" id="tags-error"></p>
+      <div class="dialog-actions">
+        <button type="button" data-close>Chiudi</button>
+      </div>
+    </div>
   </dialog>
 
   <dialog id="preview-dialog" class="wide">

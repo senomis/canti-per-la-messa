@@ -84,10 +84,35 @@ dal login. **Non usare mai la chiave `service_role` / `secret`.**
 
 In alternativa: trascina la cartella su <https://app.netlify.com/drop>.
 
+## Ruoli
+
+Ci sono due ruoli:
+
+- **admin**: può fare tutto, compresa la gestione delle **tipologie** (pulsante “Tipologie”:
+  aggiungere, rinominare, riordinare, eliminare).
+- **collaboratore** (tutti gli altri): gestisce canti e scalette, usa le tipologie esistenti.
+
+Il ruolo si assegna nel SQL Editor di Supabase (l'utente deve poi uscire e rientrare nell'app):
+
+```sql
+-- rendere admin
+update auth.users
+   set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"role":"admin"}'
+ where email = 'nome@esempio.it';
+
+-- togliere il ruolo admin
+update auth.users
+   set raw_app_meta_data = raw_app_meta_data - 'role'
+ where email = 'nome@esempio.it';
+```
+
+Il limite è applicato anche dal database (regole RLS sulla tabella `tags`), non solo
+nascondendo il pulsante. Gli utenti si creano sempre dalla dashboard di Supabase.
+
 ## Personalizzazioni
 
-- **Tipologie**: elenco `TAGS` in `js/config.js`. Puoi cambiare le etichette e aggiungerne di
-  nuove; non cambiare l'`id` di quelle già usate.
+- **Tipologie**: si gestiscono dall'app (solo admin). L'elenco `DEMO_TAGS` in `js/config.js`
+  serve solo alla modalità demo.
 - **Dimensione massima dei PDF**: `MAX_FILE_MB` in `js/config.js` e `file_size_limit` del
   bucket (Storage → songs → Edit bucket).
 
