@@ -1,6 +1,6 @@
-import { SUPABASE_URL, SUPABASE_ANON_KEY, MAX_FILE_MB } from './config.js';
-import { createBackend } from './backend.js';
-import { countPages, extractText, buildPlaylistPdf, openForRender, renderPage } from './pdf.js';
+import { SUPABASE_URL, SUPABASE_ANON_KEY, MAX_FILE_MB } from './config.js?v=2026.10.02';
+import { createBackend } from './backend.js?v=2026.10.02';
+import { countPages, extractText, buildPlaylistPdf, openForRender, renderPage } from './pdf.js?v=2026.10.02';
 
 // ---------------------------------------------------------------- Utilità
 
