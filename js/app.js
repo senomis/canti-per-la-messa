@@ -1,6 +1,6 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY, MAX_FILE_MB } from './config.js';
 import { createBackend } from './backend.js';
-import { countPages, buildPlaylistPdf, openForRender, renderPage } from './pdf.js';
+import { countPages, extractText, buildPlaylistPdf, openForRender, renderPage } from './pdf.js';
 
 // ---------------------------------------------------------------- Utilità
 
@@ -8,7 +8,9 @@ const $ = (sel) => document.querySelector(sel);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // Minuscolo e senza accenti, per confronti e ricerca ("perché" trova "perche").
-const norm = (s) => String(s ?? '').normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+// "fold" non toglie gli spazi iniziali, così le posizioni corrispondono al testo originale.
+const fold = (s) => String(s ?? '').normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+const norm = (s) => fold(s).trim();
 const tagLabel = (id) => state.tags.find((t) => t.id === id)?.label ?? id;
 const byTitle = (a, b) => a.title.localeCompare(b.title, 'it', { sensitivity: 'base' });
 // Scalette: prima le più recenti per data, poi quelle senza data in ordine alfabetico.
@@ -51,10 +53,21 @@ async function readPdfFile(file) {
   if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') throw new Error(`"${file.name}" non è un PDF.`);
   if (file.size > MAX_FILE_MB * 1024 * 1024) throw new Error(`"${file.name}" supera ${MAX_FILE_MB} MB.`);
   const bytes = new Uint8Array(await file.arrayBuffer());
+  let pageCount;
   try {
-    return { bytes, pageCount: await countPages(bytes) };
+    pageCount = await countPages(bytes);
   } catch {
     throw new Error(`"${file.name}" non è un PDF valido oppure è protetto da password.`);
+  }
+  return { bytes, pageCount, lyrics: await safeExtractText(bytes) };
+}
+
+// Se il testo non si riesce a leggere il canto si salva lo stesso, solo senza ricerca nel testo.
+async function safeExtractText(bytes) {
+  try {
+    return await extractText(bytes);
+  } catch {
+    return '';
   }
 }
 
@@ -76,7 +89,7 @@ const state = {
   tags: [], // [{ id, label, position }] in ordine di posizione
   songs: [],
   playlists: [],
-  filter: { words: [], tags: new Set(), mode: 'all' },
+  filter: { words: [], tags: new Set(), mode: 'all', inText: true },
   pl: { id: null, name: '', date: '', songIds: [] }, // scaletta aperta
   dirty: false,
 };
@@ -208,6 +221,48 @@ $('#btn-clear-filters').addEventListener('click', () => {
   renderSongs();
 });
 
+const SEARCH_TEXT_KEY = 'canti-per-la-messa:search-text';
+try {
+  state.filter.inText = localStorage.getItem(SEARCH_TEXT_KEY) !== '0';
+} catch { /* archivio del browser non disponibile */ }
+$('#search-text').checked = state.filter.inText;
+$('#search-text').addEventListener('change', (e) => {
+  state.filter.inText = e.target.checked;
+  try {
+    localStorage.setItem(SEARCH_TEXT_KEY, e.target.checked ? '1' : '0');
+  } catch { /* pazienza */ }
+  renderSongs();
+});
+
+// Indicizzazione (solo admin): legge il testo dei canti caricati prima della ricerca nel testo.
+let indexing = false;
+$('#btn-index').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  const todo = state.songs.filter((s) => s.lyrics == null);
+  if (!todo.length || indexing) return;
+  indexing = true;
+  btn.disabled = true;
+  let done = 0;
+  let failed = 0;
+  for (const song of todo) {
+    btn.textContent = `Indicizzo ${done + failed + 1}/${todo.length}…`;
+    try {
+      const updated = await backend.setLyrics(song, await safeExtractText(await getPdf(song)));
+      state.songs = state.songs.map((s) => (s.id === updated.id ? updated : s));
+      pdfCache.delete(song.file_path); // non serve tenere in memoria tutti i PDF
+      done++;
+    } catch {
+      failed++;
+    }
+  }
+  indexing = false;
+  btn.disabled = false;
+  renderSongs();
+  toast(failed
+    ? `Testo indicizzato per ${done} canti, ${failed} non riusciti: riprova più tardi.`
+    : `Testo indicizzato per ${done} canti.`, failed ? 'error' : 'ok');
+});
+
 // ---------------------------------------------------------------- Tipologie (solo admin)
 
 const tagsDialog = $('#tags-dialog');
@@ -337,23 +392,83 @@ $('#tag-add-form').addEventListener('submit', async (e) => {
 });
 
 function filteredSongs() {
-  const { words, tags, mode } = state.filter;
+  const { words, tags, mode, inText } = state.filter;
   const wanted = [...tags];
-  return state.songs.filter((s) => {
-    const t = norm(s.title);
-    if (!words.every((w) => t.includes(w))) return false;
-    if (!wanted.length) return true;
-    return mode === 'all' ? wanted.every((x) => s.tags.includes(x)) : wanted.some((x) => s.tags.includes(x));
-  });
+  const titleHits = [];
+  const textHits = []; // trovati solo nel testo: vengono dopo quelli trovati nel titolo
+  for (const s of state.songs) {
+    if (wanted.length && !(mode === 'all'
+      ? wanted.every((x) => s.tags.includes(x)) : wanted.some((x) => s.tags.includes(x)))) continue;
+    const title = norm(s.title);
+    if (words.every((w) => title.includes(w))) titleHits.push(s);
+    // Ogni parola può stare nel titolo o nel testo ("natale luce").
+    else if (inText && s.lyrics && words.every((w) => title.includes(w) || foldedLyrics(s).includes(w))) textHits.push(s);
+  }
+  return { titleHits, textHits };
+}
+
+// Testo del canto in minuscolo e senza accenti, calcolato una volta per canto.
+const foldedCache = new WeakMap();
+function foldedLyrics(song) {
+  if (!foldedCache.has(song)) foldedCache.set(song, fold(song.lyrics ?? ''));
+  return foldedCache.get(song);
+}
+
+// Frammento del testo intorno alla parola cercata più lunga (la più significativa),
+// con tutte le parole cercate evidenziate.
+function snippet(song, words) {
+  const text = song.lyrics;
+  const folded = foldedLyrics(song);
+  // Se il testo ha caratteri "scomposti" le posizioni non coincidono: si mostra la versione normalizzata.
+  const source = folded.length === text.length ? text : folded;
+  const found = words.filter((w) => folded.includes(w)).sort((a, b) => b.length - a.length);
+  if (!found.length) return '';
+  const at = folded.indexOf(found[0]);
+  let start = Math.max(0, at - 45);
+  let end = Math.min(source.length, at + found[0].length + 70);
+  // Si taglia su uno spazio, per non spezzare le parole.
+  if (start > 0) start = source.indexOf(' ', start) + 1 || start;
+  if (end < source.length) {
+    const space = source.lastIndexOf(' ', end);
+    if (space > at + found[0].length) end = space;
+  }
+
+  // Tratti da evidenziare: ogni parola cercata (di almeno 2 lettere) dentro il frammento.
+  const marks = [];
+  for (const w of found.filter((x) => x.length > 1 || x === found[0])) {
+    for (let i = folded.indexOf(w, start); i >= 0 && i < end; i = folded.indexOf(w, i + w.length)) {
+      marks.push([i, Math.min(i + w.length, end)]);
+    }
+  }
+  marks.sort((a, b) => a[0] - b[0]);
+  const show = (s) => esc(s.replace(/\s*\n+\s*/g, ' / '));
+  let html = start > 0 ? '…' : '';
+  let pos = start;
+  for (const [a, b] of marks) {
+    if (b <= pos) continue;
+    html += `${show(source.slice(pos, Math.max(a, pos)))}<mark>${show(source.slice(Math.max(a, pos), b))}</mark>`;
+    pos = b;
+  }
+  return `${html}${show(source.slice(pos, end))}${end < source.length ? '…' : ''}`;
 }
 
 function renderSongs() {
-  const list = filteredSongs();
+  const { titleHits, textHits } = filteredSongs();
+  const list = [...titleHits, ...textHits];
+  const fromText = new Set(textHits);
   const inPlaylist = new Set(state.pl.songIds);
   const total = state.songs.length;
-  $('#song-count').textContent = total === 0
+  const unindexed = state.songs.filter((s) => s.lyrics == null).length;
+  let count = total === 0
     ? 'L\'archivio è vuoto: aggiungi il primo canto.'
     : list.length === total ? `${total} canti` : `${list.length} di ${total} canti`;
+  if (textHits.length) count += ` (${textHits.length} trovati nel testo)`;
+  if (state.filter.inText && state.filter.words.length && unindexed) {
+    count += ` · ${unindexed} canti senza testo indicizzato`;
+  }
+  $('#song-count').textContent = count;
+  $('#btn-index').hidden = !(state.admin && unindexed);
+  if (!indexing) $('#btn-index').textContent = `Indicizza i testi (${unindexed})`;
 
   $('#song-list').innerHTML = list.map((s) => `
     <li class="song ${inPlaylist.has(s.id) ? 'in-pl' : ''}" data-id="${s.id}">
@@ -362,6 +477,7 @@ function renderSongs() {
         <span class="title">${esc(s.title)}</span>
         <span class="tags">${s.tags.map((t) => `<span class="tag">${esc(tagLabel(t))}</span>`).join('')}
           ${inPlaylist.has(s.id) ? '<span class="tag here">in scaletta</span>' : ''}</span>
+        ${fromText.has(s) ? `<span class="snippet">${snippet(s, state.filter.words)}</span>` : ''}
       </div>
       <span class="meta">${s.page_count ?? '?'} pag.</span>
       <div class="row-actions">
@@ -459,7 +575,7 @@ songForm.addEventListener('submit', async (e) => {
   try {
     let pdf = {};
     if (file) pdf = await readPdfFile(file);
-    const data = { title, tags, file, bytes: pdf.bytes, pageCount: pdf.pageCount };
+    const data = { title, tags, file, bytes: pdf.bytes, pageCount: pdf.pageCount, lyrics: pdf.lyrics };
     if (editingSong) {
       const updated = await backend.updateSong(editingSong, data);
       if (file) pdfCache.delete(editingSong.file_path);
@@ -517,17 +633,17 @@ importForm.addEventListener('submit', async (e) => {
       if (existing.length > 1 && onDup === 'replace') {
         throw new Error(`ci sono ${existing.length} canti con questo titolo: sostituisci il PDF con “Modifica”`);
       }
-      const { bytes, pageCount } = await readPdfFile(file);
+      const { bytes, pageCount, lyrics } = await readPdfFile(file);
       if (existing.length && onDup === 'replace') {
         const [old] = existing;
-        const updated = await backend.updateSong(old, { title: old.title, tags: old.tags, file, bytes, pageCount });
+        const updated = await backend.updateSong(old, { title: old.title, tags: old.tags, file, bytes, pageCount, lyrics });
         pdfCache.delete(old.file_path);
         state.songs = state.songs.map((s) => (s.id === updated.id ? updated : s));
         li.className = 'ok';
         li.textContent = `${title} — PDF sostituito (${pageCount} pag.)`;
         replaced++;
       } else {
-        state.songs.push(await backend.createSong({ title, tags, file, bytes, pageCount }));
+        state.songs.push(await backend.createSong({ title, tags, file, bytes, pageCount, lyrics }));
         li.className = 'ok';
         li.textContent = `${title} — aggiunto (${pageCount} pag.)`;
         added++;

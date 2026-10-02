@@ -3,7 +3,11 @@
 Web app per gestire un archivio di canti (un PDF per canto) e creare scalette da scaricare
 come un unico PDF.
 
-- **Ricerca** per titolo (anche parziale, senza badare ad accenti o maiuscole) e per tipologia.
+- **Ricerca** per titolo e nel **testo dei canti** (anche parziale, senza badare ad accenti o
+  maiuscole) e per tipologia. Per i canti trovati nel testo viene mostrato il frammento.
+  Il testo viene letto dal PDF al caricamento; per i canti caricati prima, l'admin usa una
+  volta “Indicizza i testi”. Funziona con PDF che contengono testo (es. esportati da
+  PowerPoint), non con scansioni.
 - **Archivio**: aggiunta di un canto (PDF + tipologie), importazione di molti PDF insieme,
   modifica (titolo, tipologie, sostituzione del file), eliminazione.
 - **Scalette**: composizione, riordino (trascinamento o frecce), salvataggio con nome e data

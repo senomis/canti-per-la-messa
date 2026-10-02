@@ -30,6 +30,25 @@ export async function renderPage(doc, n, canvas, width) {
   await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
 }
 
+// Testo contenuto nel PDF (per la ricerca): una riga per riga di testo, pagine separate da una riga vuota.
+export async function extractText(bytes) {
+  const doc = await openForRender(bytes);
+  try {
+    const pages = [];
+    for (let n = 1; n <= doc.numPages; n++) {
+      const { items } = await (await doc.getPage(n)).getTextContent();
+      const text = items.map((it) => it.str + (it.hasEOL ? '\n' : ' ')).join('')
+        .replace(/[ \t]+/g, ' ')
+        .replace(/ *\n */g, '\n')
+        .trim();
+      if (text) pages.push(text);
+    }
+    return pages.join('\n\n');
+  } finally {
+    doc.destroy();
+  }
+}
+
 async function isBlackPage(bytes, index) {
   const doc = await openForRender(bytes);
   try {
@@ -159,7 +178,7 @@ export async function buildPlaylistPdf(items, { title, date, cover, dropFinalBla
 }
 
 // Solo per la modalità demo: crea un PDF segnaposto con N pagine di testo + pagina nera finale.
-export async function makeSamplePdf(title, textPages = 2) {
+export async function makeSamplePdf(title, textPages = 2, phrase = '') {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -168,7 +187,7 @@ export async function makeSamplePdf(title, textPages = 2) {
     const page = doc.addPage([w, h]);
     page.drawText(title, { x: 60, y: h - 90, size: 36, font: bold, color: rgb(0.1, 0.1, 0.1) });
     for (let l = 0; l < 4; l++) {
-      page.drawText(`Testo di esempio - strofa ${p}, riga ${l + 1}`, {
+      page.drawText(l === 0 && phrase ? phrase : `Testo di esempio - strofa ${p}, riga ${l + 1}`, {
         x: 60, y: h - 170 - l * 50, size: 28, font, color: rgb(0.2, 0.2, 0.2),
       });
     }

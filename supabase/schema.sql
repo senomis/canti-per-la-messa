@@ -10,6 +10,7 @@ create table public.songs (
   file_path   text not null unique,      -- percorso del PDF nel bucket "songs"
   file_name   text,                      -- nome originale del file caricato
   page_count  int,
+  lyrics      text,                      -- testo estratto dal PDF (per la ricerca)
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );

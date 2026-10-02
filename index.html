@@ -42,6 +42,7 @@
         <div class="panel-head">
           <h2 id="songs-heading">Archivio canti</h2>
           <div class="actions">
+            <button id="btn-index" type="button" hidden title="Legge il testo dei canti caricati prima della ricerca nel testo">Indicizza i testi</button>
             <button id="btn-tags" type="button" hidden>Tipologie</button>
             <button id="btn-import" type="button">Importa più PDF</button>
             <button id="btn-new-song" class="primary" type="button">+ Nuovo canto</button>
@@ -49,7 +50,10 @@
         </div>
 
         <div class="filters">
-          <input id="search" type="search" placeholder="Cerca per titolo (anche parziale)…" autocomplete="off">
+          <div class="search-row">
+            <input id="search" type="search" placeholder="Cerca per titolo o parole del testo…" autocomplete="off">
+            <label class="inline small"><input type="checkbox" id="search-text"> Cerca anche nel testo</label>
+          </div>
           <div id="tag-filter" class="chips" role="group" aria-label="Filtra per tipologia"></div>
           <div class="filter-mode">
             <span class="muted">Con più tipologie:</span>

@@ -69,23 +69,24 @@ async function supabaseBackend(url, key) {
     async listSongs() {
       return check(await sb.from('songs').select('*'));
     },
-    async createSong({ title, tags, file, pageCount }) {
+    async createSong({ title, tags, file, pageCount, lyrics }) {
       const path = await upload(file);
       try {
         return check(await sb.from('songs')
-          .insert({ title, tags, file_path: path, file_name: file.name, page_count: pageCount })
+          .insert({ title, tags, file_path: path, file_name: file.name, page_count: pageCount, lyrics })
           .select().single());
       } catch (e) {
         await removeFile(path);
         throw e;
       }
     },
-    async updateSong(song, { title, tags, file, pageCount }) {
+    async updateSong(song, { title, tags, file, pageCount, lyrics }) {
       const patch = { title, tags };
       if (file) {
         patch.file_path = await upload(file);
         patch.file_name = file.name;
         patch.page_count = pageCount;
+        patch.lyrics = lyrics;
       }
       try {
         const row = check(await sb.from('songs').update(patch).eq('id', song.id).select().single());
@@ -95,6 +96,9 @@ async function supabaseBackend(url, key) {
         if (file) await removeFile(patch.file_path);
         throw e;
       }
+    },
+    async setLyrics(song, lyrics) {
+      return check(await sb.from('songs').update({ lyrics }).eq('id', song.id).select().single());
     },
     async deleteSong(song) {
       check(await sb.from('songs').delete().eq('id', song.id));
@@ -131,24 +135,26 @@ async function demoBackend() {
   const clone = (x) => structuredClone(x);
   const now = () => new Date().toISOString();
 
+  // [titolo, tipologie, pagine di testo, frase di prova per la ricerca nel testo]
   const samples = [
-    ['Canto di ingresso (esempio)', ['ingresso'], 2],
-    ['Alleluia (esempio)', ['vangelo', 'pasquale'], 1],
-    ['Offertorio (esempio)', ['offertorio'], 2],
-    ['Comunione (esempio)', ['comunione'], 3],
-    ['Canto finale (esempio)', ['conclusione'], 2],
-    ['Vieni Spirito (esempio)', ['spirito_santo'], 2],
-    ['Canto natalizio (esempio)', ['natalizio'], 2],
-    ['Canto mariano (esempio)', ['mariano', 'conclusione'], 2],
-    ['Canto di Avvento (esempio)', ['avvento', 'ingresso'], 2],
+    ['Canto di ingresso (esempio)', ['ingresso'], 2, 'Veniamo insieme alla tua casa'],
+    ['Alleluia (esempio)', ['vangelo', 'pasquale'], 1, 'La tua parola è luce sul cammino'],
+    ['Offertorio (esempio)', ['offertorio'], 2, 'Portiamo pane e vino all\'altare'],
+    ['Comunione (esempio)', ['comunione'], 3, 'Pane spezzato per la nostra vita'],
+    ['Canto finale (esempio)', ['conclusione'], 2, 'Andiamo per le strade del mondo'],
+    ['Vieni Spirito (esempio)', ['spirito_santo'], 2, 'Soffio di vita, fuoco che illumina'],
+    ['Canto natalizio (esempio)', ['natalizio'], 2, 'Nella notte una luce è nata'],
+    ['Canto mariano (esempio)', ['mariano', 'conclusione'], 2, 'Madre della luce, cammina con noi'],
+    ['Canto di Avvento (esempio)', ['avvento', 'ingresso'], 2, 'Prepariamo la strada al Signore'],
   ];
-  for (const [title, tags, pages] of samples) {
-    const bytes = await makeSamplePdf(title, pages);
+  for (const [title, tags, pages, phrase] of samples) {
+    const bytes = await makeSamplePdf(title, pages, phrase);
     const file_path = newPath();
     files.set(file_path, bytes);
     songs.push({
       id: crypto.randomUUID(), title, tags, file_path, file_name: `${title}.pdf`,
-      page_count: await countPages(bytes), created_at: now(), updated_at: now(),
+      // lyrics: null = non indicizzato, così in demo si può provare "Indicizza i testi"
+      page_count: await countPages(bytes), lyrics: null, created_at: now(), updated_at: now(),
     });
   }
 
@@ -193,17 +199,17 @@ async function demoBackend() {
     },
 
     async listSongs() { return clone(songs); },
-    async createSong({ title, tags, file, bytes, pageCount }) {
+    async createSong({ title, tags, file, bytes, pageCount, lyrics }) {
       const file_path = newPath();
       files.set(file_path, bytes);
       const song = {
         id: crypto.randomUUID(), title, tags, file_path, file_name: file.name,
-        page_count: pageCount, created_at: now(), updated_at: now(),
+        page_count: pageCount, lyrics, created_at: now(), updated_at: now(),
       };
       songs.push(song);
       return clone(song);
     },
-    async updateSong(song, { title, tags, file, bytes, pageCount }) {
+    async updateSong(song, { title, tags, file, bytes, pageCount, lyrics }) {
       const s = songs.find((x) => x.id === song.id);
       Object.assign(s, { title, tags, updated_at: now() });
       if (file) {
@@ -211,8 +217,14 @@ async function demoBackend() {
         s.file_path = newPath();
         s.file_name = file.name;
         s.page_count = pageCount;
+        s.lyrics = lyrics;
         files.set(s.file_path, bytes);
       }
+      return clone(s);
+    },
+    async setLyrics(song, lyrics) {
+      const s = songs.find((x) => x.id === song.id);
+      s.lyrics = lyrics;
       return clone(s);
     },
     async deleteSong(song) {
