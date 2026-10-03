@@ -106,6 +106,10 @@ label.inline { display: flex; align-items: center; gap: .5rem; font-weight: 400;
   border-bottom: 1px solid var(--border);
 }
 .user { display: flex; align-items: center; gap: .25rem; flex-wrap: wrap; }
+.topbar-link { color: var(--text); text-decoration: none; padding: .45rem .8rem; border-radius: 8px; }
+.topbar-link:hover { background: var(--surface-2); }
+.login-help { margin: 0; text-align: center; }
+.login-help a { color: var(--accent); }
 
 .layout {
   display: grid;

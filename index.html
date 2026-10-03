@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Canti per la messa</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>">
-  <link rel="stylesheet" href="css/style.css?v=2026.10.02">
-  <script type="module" src="js/app.js?v=2026.10.02"></script>
+  <link rel="stylesheet" href="css/style.css?v=2026.10.03">
+  <script type="module" src="js/app.js?v=2026.10.03"></script>
 </head>
 <body>
   <div id="demo-banner" class="banner" hidden>
@@ -23,6 +23,7 @@
       <label>Password <input type="password" name="password" required autocomplete="current-password"></label>
       <p class="error" id="login-error"></p>
       <button class="primary" type="submit">Accedi</button>
+      <p class="muted small login-help"><a href="guida.html" target="_blank" rel="noopener">Guida all'uso dell'app</a></p>
     </form>
   </section>
 
@@ -32,6 +33,7 @@
       <div class="user">
         <span id="user-email" class="muted"></span>
         <span id="user-role" class="role-badge" hidden>admin</span>
+        <a href="guida.html" target="_blank" rel="noopener" class="topbar-link">Guida</a>
         <button id="btn-password" class="ghost" type="button">Cambia password</button>
         <button id="btn-logout" class="ghost" type="button">Esci</button>
       </div>

@@ -126,8 +126,8 @@ async function supabaseBackend(url, key) {
 }
 
 async function demoBackend() {
-  const { makeSamplePdf, countPages } = await import('./pdf.js?v=2026.10.02');
-  const { DEMO_TAGS } = await import('./config.js?v=2026.10.02');
+  const { makeSamplePdf, countPages } = await import('./pdf.js?v=2026.10.03');
+  const { DEMO_TAGS } = await import('./config.js?v=2026.10.03');
   const files = new Map();
   let songs = [];
   let playlists = [];

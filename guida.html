@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Guida · Canti per la messa</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>">
+  <link rel="stylesheet" href="css/style.css?v=2026.10.03">
+  <style>
+    .guide { max-width: 760px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+    .guide-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .guide-head .actions a { color: var(--accent); }
+    .guide h1 { font-size: 1.6rem; }
+    .guide h2 { font-size: 1.2rem; margin: 2.2rem 0 .6rem; padding-top: .4rem; border-top: 1px solid var(--border); }
+    .guide h3 { font-size: 1rem; margin: 1.3rem 0 .4rem; }
+    .guide p, .guide li { line-height: 1.6; }
+    .guide ol, .guide ul { padding-left: 1.4rem; }
+    .guide li + li { margin-top: .25rem; }
+    .guide a { color: var(--accent); }
+    .toc { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .8rem 1.2rem; }
+    .toc ol { margin: .3rem 0 0; }
+    .ui { /* nomi di pulsanti e campi come appaiono nell'app */
+      font-weight: 600; white-space: nowrap;
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; padding: 0 .35em;
+    }
+    .note { background: var(--accent-soft); border-radius: 8px; padding: .6rem .9rem; margin: .8rem 0; }
+    .admin-only { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
+      padding: .1rem .5rem; border-radius: 999px; background: var(--accent-soft); color: var(--accent); vertical-align: middle; }
+    @media print {
+      :root { --bg: #fff; --surface: #fff; --surface-2: #f2f2f2; --text: #000; --muted: #444; --border: #ccc; --accent: #7a3b2e; --accent-soft: #f3e4df; }
+      body { font-size: 10.5pt; }
+      .no-print { display: none !important; }
+      .guide { max-width: none; padding: 0; }
+      .guide h2 { break-after: avoid; }
+      .guide h3 { break-after: avoid; }
+      .note, .toc { break-inside: avoid; }
+      .guide a { color: inherit; text-decoration: none; }
+    }
+    @page { size: A4; margin: 18mm 16mm; }
+  </style>
+</head>
+<body>
+  <main class="guide">
+    <div class="guide-head">
+      <h1>🎵 Guida a “Canti per la messa”</h1>
+      <div class="actions no-print">
+        <a href="./">← Torna all'app</a>
+        <button type="button" onclick="print()">Stampa / salva PDF</button>
+      </div>
+    </div>
+
+    <p>L'app serve a tenere l'archivio dei canti (un PDF per canto) e a preparare le
+      <b>scalette</b> per la messa, da scaricare come un unico PDF con tutti i canti nell'ordine giusto.</p>
+
+    <nav class="toc" aria-label="Indice">
+      <b>Indice</b>
+      <ol>
+        <li><a href="#accesso">Accesso</a></li>
+        <li><a href="#ricerca">Cercare i canti</a></li>
+        <li><a href="#archivio">Aggiungere e modificare i canti</a></li>
+        <li><a href="#scalette">Preparare una scaletta</a></li>
+        <li><a href="#pdf">Scaricare il PDF della scaletta</a></li>
+        <li><a href="#admin">Funzioni dell'amministratore</a></li>
+        <li><a href="#problemi">Domande frequenti</a></li>
+      </ol>
+    </nav>
+
+    <h2 id="accesso">1. Accesso</h2>
+    <ul>
+      <li>Entra con l'<b>email</b> e la <b>password</b> che ti ha dato l'amministratore. Non è possibile registrarsi da soli.</li>
+      <li>Al primo accesso cambia la password con <span class="ui">Cambia password</span>, in alto a destra (almeno 8 caratteri).</li>
+      <li>Per uscire premi <span class="ui">Esci</span>. Sui computer condivisi esci sempre al termine.</li>
+      <li>Se hai dimenticato la password, chiedi all'amministratore di impostarne una nuova.</li>
+    </ul>
+
+    <h2 id="ricerca">2. Cercare i canti</h2>
+    <p>L'elenco a sinistra (<b>Archivio canti</b>) mostra tutti i canti in ordine alfabetico. Per restringerlo:</p>
+    <ul>
+      <li><b>Casella di ricerca</b>: scrivi anche solo una parte del titolo. Maiuscole e accenti non contano
+        (<i>perche</i> trova <i>Perché</i>). Con più parole, il canto deve contenerle tutte.</li>
+      <li><span class="ui">Cerca anche nel testo</span>: cerca le parole anche dentro il testo dei canti. I canti trovati
+        nel titolo compaiono per primi; per quelli trovati nel testo compare il frammento della strofa,
+        con le parole evidenziate.</li>
+      <li><b>Tipologie</b> (Ingresso, Comunione, Mariano…): clicca una o più etichette per filtrare.
+        Con più etichette scegli se il canto deve averle <span class="ui">tutte</span> o <span class="ui">almeno una</span>.</li>
+      <li><span class="ui">Azzera filtri</span> toglie ricerca e tipologie e mostra di nuovo tutto l'archivio.</li>
+    </ul>
+    <p>Accanto a ogni canto: <span class="ui">Apri</span> mostra il PDF in una nuova scheda,
+      <span class="ui">Modifica</span> e <span class="ui">Elimina</span> sono descritti più avanti.</p>
+
+    <h2 id="archivio">3. Aggiungere e modificare i canti</h2>
+
+    <h3>Un canto alla volta</h3>
+    <ol>
+      <li>Premi <span class="ui">+ Nuovo canto</span>.</li>
+      <li>Scegli il <b>file PDF</b>: il titolo viene proposto dal nome del file e puoi correggerlo.</li>
+      <li>Spunta una o più <b>tipologie</b> e premi <span class="ui">Salva</span>.</li>
+    </ol>
+    <p>Se esiste già un canto con lo stesso titolo, l'app chiede conferma prima di salvare.</p>
+
+    <h3>Molti canti insieme</h3>
+    <ol>
+      <li>Premi <span class="ui">Importa più PDF</span> e seleziona tutti i file (Ctrl+clic o Maiusc+clic).</li>
+      <li>Facoltativo: spunta le tipologie da assegnare a <b>tutti</b> i file importati.</li>
+      <li>Scegli cosa fare se un titolo è <b>già presente</b>:
+        <ul>
+          <li><b>Salta il file</b>: il canto esistente resta com'è;</li>
+          <li><b>Sostituisci il PDF</b>: aggiorna il file del canto esistente, mantenendo tipologie e scalette
+            (utile per correggere i testi);</li>
+          <li><b>Aggiungi comunque</b>: crea un secondo canto con lo stesso titolo.</li>
+        </ul>
+      </li>
+      <li>Premi <span class="ui">Importa</span>: l'elenco mostra l'esito di ogni file (✓ fatto, – saltato, ✕ errore).</li>
+    </ol>
+    <div class="note">Il titolo viene preso dal nome del file, quindi conviene dare ai file il nome esatto del canto,
+      per esempio <i>Resta con noi.pdf</i>.</div>
+
+    <h3>Modificare o eliminare</h3>
+    <ul>
+      <li><span class="ui">Modifica</span>: cambia titolo e tipologie, oppure sostituisci il PDF scegliendo un nuovo file.
+        Il canto resta in tutte le scalette in cui era.</li>
+      <li><span class="ui">Elimina</span>: cancella il canto definitivamente e lo toglie anche dalle scalette salvate
+        (l'app avvisa quali).</li>
+    </ul>
+
+    <h2 id="scalette">4. Preparare una scaletta</h2>
+    <p>La scaletta si compone nel riquadro <b>Scaletta</b> (a destra; sul telefono sotto l'archivio).</p>
+    <ol>
+      <li>Premi <span class="ui">Nuova</span>, scrivi il <b>nome</b> (es. <i>XXVII domenica T.O.</i>) e scegli la <b>data</b> della messa.</li>
+      <li>Nell'archivio premi <span class="ui">+</span> accanto a ogni canto da aggiungere, nell'ordine che preferisci.
+        I canti già in scaletta sono segnati con <i>in scaletta</i>.</li>
+      <li>Riordina <b>trascinando</b> i canti oppure con le frecce <span class="ui">↑</span> <span class="ui">↓</span>;
+        togli un canto con <span class="ui">✕</span>.</li>
+      <li>Premi <span class="ui">Salva</span>. Finché non salvi compare <i>● modifiche non salvate</i>.</li>
+    </ol>
+    <ul>
+      <li><b>Riaprire una scaletta</b>: scegli dal menu <i>Apri scaletta salvata…</i>. Le più recenti, per data, sono in cima.</li>
+      <li><span class="ui">Duplica</span>: crea una copia della scaletta aperta, con la data spostata alla settimana dopo.
+        Cambia il nome e salvala: è il modo più veloce per partire dalla domenica precedente.</li>
+      <li><span class="ui">Elimina</span>: cancella la scaletta; i canti restano nell'archivio.</li>
+    </ul>
+    <div class="note">Scalette e canti sono condivisi: tutti i collaboratori vedono e possono modificare le stesse
+      scalette. Se due persone salvano la stessa scaletta, resta l'ultima versione salvata.</div>
+
+    <h2 id="pdf">5. Scaricare il PDF della scaletta</h2>
+    <p>Sotto la scaletta ci sono due opzioni, che l'app ricorda per le volte successive:</p>
+    <ul>
+      <li><span class="ui">Copertina con nome, data ed elenco dei canti</span>: aggiunge una prima pagina con il nome della scaletta,
+        la data e l'elenco dei canti con la pagina da cui inizia ciascuno.</li>
+      <li><span class="ui">Togli la pagina nera dopo l'ultimo canto</span>: rimuove la pagina nera di chiusura dell'ultimo canto
+        (solo se è davvero nera).</li>
+    </ul>
+    <p>Poi:</p>
+    <ul>
+      <li><span class="ui">Anteprima</span> mostra le miniature di tutte le pagine, raggruppate per canto, per controllare prima di scaricare;</li>
+      <li><span class="ui">Scarica PDF</span> crea il file unico, che prende il nome della scaletta.</li>
+    </ul>
+    <p>Non serve salvare la scaletta per scaricarne il PDF.</p>
+
+    <h2 id="admin">6. Funzioni dell'amministratore <span class="admin-only">admin</span></h2>
+    <p>Chi ha il ruolo di amministratore vede la scritta <span class="ui">ADMIN</span> accanto alla propria email e alcuni pulsanti in più.</p>
+    <ul>
+      <li><span class="ui">Tipologie</span>: aggiunge, rinomina, riordina ed elimina le tipologie dei canti. Le modifiche si salvano subito.
+        Rinominare una tipologia non cambia i canti a cui è assegnata; eliminarla la toglie da tutti i canti.</li>
+      <li><span class="ui">Indicizza i testi (N)</span>: compare solo se ci sono canti di cui l'app non ha ancora letto il testo
+        (ad esempio caricati prima della ricerca nel testo). Va premuto una volta; i canti caricati in seguito vengono letti automaticamente.</li>
+    </ul>
+    <p>Gli utenti si creano e si nominano amministratori dalla dashboard di Supabase (istruzioni nel file README del progetto).</p>
+
+    <h2 id="problemi">7. Domande frequenti</h2>
+    <h3>Dopo un aggiornamento dell'app non vedo le novità</h3>
+    <p>Ricarica la pagina forzando l'aggiornamento: <b>Ctrl+F5</b> sul computer; sul telefono chiudi e riapri la scheda.</p>
+    <h3>Un canto non viene trovato cercando nel testo</h3>
+    <p>La ricerca nel testo funziona con i PDF che contengono testo vero (ad esempio esportati da PowerPoint o Word),
+      non con scansioni o foto. Verifica che <span class="ui">Cerca anche nel testo</span> sia spuntato.</p>
+    <h3>L'app non carica i dati</h3>
+    <p>Se l'app non viene usata per una settimana, il servizio gratuito che conserva i dati va in pausa.
+      Avvisa l'amministratore, che lo riattiva dalla dashboard di Supabase: i dati non si perdono.</p>
+    <h3>Ho chiuso la pagina senza salvare la scaletta</h3>
+    <p>Le modifiche non salvate vanno perse: il browser di solito avvisa prima di chiudere. Salva spesso.</p>
+  </main>
+</body>
+</html>
